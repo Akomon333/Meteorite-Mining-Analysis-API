@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ASTRA_OS | Mission Control</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono&display=swap');
+        body { margin: 0; background: #05070a; color: #94a3b8; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .mono { font-family: 'JetBrains+Mono', monospace; }
+        #canvas-container { width: 100%; height: 100vh; position: absolute; z-index: 1; }
+        .ui-root { position: relative; z-index: 10; pointer-events: none; height: 100vh; display: flex; flex-direction: column; padding: 2rem; }
+        .interactive { pointer-events: auto; }
+        .data-card { background: rgba(15, 18, 26, 0.9); border: 1px solid #1e2533; border-radius: 4px; backdrop-filter: blur(8px); padding: 1.5rem; }
+        select { background: #1e2533; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="ui-root">
+        <header class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter text-white">ASTRA_OS <span class="text-blue-500">v4.0</span></h1>
+                <p class="mono text-[10px] text-blue-500/60">PROSPECTING ENGINE // ONLINE</p>
+            </div>
+            <div class="interactive flex items-center gap-6">
+                <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold uppercase">Orbit</label>
+                    <select id="orbit-type">
+                        <option>Near-Earth (NEO)</option>
+                        <option>Main Belt</option>
+                        <option>Trojan Asteroids</option>
+                    </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label class="text-[9px] font-bold uppercase">Drill</label>
+                    <select id="drill-type">
+                        <option>Tungsten Carbide</option>
+                        <option>Polycrystalline Diamond (PCD)</option>
+                    </select>
+                </div>
+                <label class="bg-white text-black px-6 py-3 text-[11px] font-black uppercase cursor-pointer hover:bg-blue-500 hover:text-white transition-all">
+                    Analyze Target
+                    <input type="file" id="file-input" class="hidden">
+                </label>
+            </div>
+        </header>
+
+        <div class="flex-1 grid grid-cols-12 gap-6 items-center mt-8">
+            <div class="col-span-3 space-y-4 interactive">
+                <div class="data-card">
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Spectral Composition</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1"><span>Nickel</span><span id="ni-val" class="text-white">--</span></div>
+                            <div class="h-1 bg-slate-800"><div id="ni-bar" class="h-full bg-emerald-500 transition-all duration-1000"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1"><span>Iridium</span><span id="ir-val" class="text-white">--</span></div>
+                            <div class="h-1 bg-slate-800"><div id="ir-bar" class="h-full bg-blue-500 transition-all duration-1000"></div></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1"><span>Gold</span><span id="au-val" class="text-white">--</span></div>
+                            <div class="h-1 bg-slate-800"><div id="au-bar" class="h-full bg-amber-500 transition-all duration-1000"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="data-card border-l-4 border-l-blue-500">
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Net Valuation</p>
+                    <h2 id="price-val" class="text-3xl font-black text-white">$0.00</h2>
+                </div>
+            </div>
+            <div class="col-span-6"></div>
+            <div class="col-span-3 space-y-4 interactive">
+                <div class="data-card">
+                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Engineering Specs</h3>
+                    <div class="grid grid-cols-2 gap-4 mono text-sm">
+                        <div><p class="text-[9px] text-slate-600 uppercase">Hardness</p><p id="hard-val" class="text-white font-bold">--</p></div>
+                        <div><p class="text-[9px] text-slate-600 uppercase">Tool Life</p><p id="life-val" class="text-white font-bold">--</p></div>
+                        <div><p class="text-[9px] text-slate-600 uppercase">Abrasive</p><p id="abr-val" class="text-white font-bold">--</p></div>
+                        <div><p class="text-[9px] text-slate-600 uppercase">Albedo</p><p id="alb-val" class="text-white font-bold">--</p></div>
+                    </div>
+                </div>
+                <div id="risk-card" class="data-card border-l-4 border-l-slate-700">
+                    <p class="text-[10px] font-bold uppercase text-slate-500">Mission Risk</p>
+                    <p id="risk-text" class="text-xl font-black text-white italic">STANDBY</p>
+                </div>
+            </div>
+        </div>
+        <button id="reset-cam" class="interactive self-end text-[10px] font-bold uppercase border border-slate-800 px-4 py-2 hover:bg-white hover:text-black transition-all">Reset Camera</button>
+    </div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let scene, camera, renderer, meteor, controls, baseGeom;
+
+function init3D() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8)); 
+    const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+    sun.position.set(10, 10, 10);
+    scene.add(sun);
+
+    // High-poly geometry for detailed craters
+    const geometry = new THREE.IcosahedronGeometry(2, 128);
+    baseGeom = geometry.attributes.position.clone();
+    
+    const material = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff, 
+        roughness: 0.8, 
+        metalness: 0.2 
+    });
+    
+    meteor = new THREE.Mesh(geometry, material);
+    scene.add(meteor);
+
+    camera.position.z = 8;
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    animate();
+}
+
+function animate() { 
+    requestAnimationFrame(animate); 
+    if(controls) controls.update(); 
+    renderer.render(scene, camera); 
+}
+
+document.getElementById('file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // 1. Reset textures and UI indicators immediately
+    const textureURL = URL.createObjectURL(file);
+    const texture = new THREE.TextureLoader().load(textureURL);
+    meteor.material.map = texture;
+    meteor.material.needsUpdate = true;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('orbit_type', document.getElementById('orbit-type').value);
+    formData.append('tool_material', document.getElementById('drill-type').value);
+
+    try {
+        const res = await fetch('https://Akomon.pythonanywhere.com/analyze/', { 
+            method: 'POST', 
+            body: formData 
+        });
+        
+        const data = await res.json();
+        console.log("Raw Server Data:", data); // Check this in F12 console!
+
+        // --- 2. THE STAT FIX: INDEPENDENT UPDATES ---
+        // We use optional chaining (?.) and defaults to prevent crashes
+        
+        const ni = data.composition?.nickel_pct || 0;
+        const ir = data.composition?.iridium_ppm || 0;
+        const au = data.composition?.gold_ppm || 0;
+
+        document.getElementById('ni-val').innerText = ni + '%';
+        document.getElementById('ir-val').innerText = ir + ' ppm';
+        document.getElementById('au-val').innerText = au + ' ppm';
+        
+        // Update Bars
+        document.getElementById('ni-bar').style.width = Math.min(100, ni * 4) + '%';
+        
+        // Update Price
+        if(data.economics?.value_usd_per_ton) {
+            document.getElementById('price-val').innerText = '$' + 
+                Number(data.economics.value_usd_per_ton).toLocaleString(undefined, {minimumFractionDigits: 2});
+        }
+
+        // Update Engineering Specs
+        document.getElementById('hard-val').innerText = data.engineering?.hardness_score || '--';
+        document.getElementById('life-val').innerText = (data.engineering?.tool_life_hrs || '--') + 'h';
+        document.getElementById('abr-val').innerText = data.engineering?.abrasive_index || '--';
+        document.getElementById('alb-val').innerText = data.visual_params?.albedo?.toFixed(2) || '--';
+        
+        // Risk Card logic
+        const risk = data.engineering?.mission_risk || 0;
+        const riskText = document.getElementById('risk-text');
+        const riskCard = document.getElementById('risk-card');
+        
+        if (risk < 50) {
+            riskText.innerText = 'OPTIMAL';
+            riskText.style.color = '#10b981';
+            riskCard.style.borderLeftColor = '#10b981';
+        } else {
+            riskText.innerText = 'CRITICAL';
+            riskText.style.color = '#ef4444';
+            riskCard.style.borderLeftColor = '#ef4444';
+        }
+
+        // --- 3. THE GEOMETRY FIX (Topology) ---
+        if (data.visual_params?.topology) {
+            const pos = meteor.geometry.attributes.position;
+            const topo = data.visual_params.topology;
+            const v = new THREE.Vector3();
+            const dScale = data.visual_params.displacement_scale || 0.5;
+
+            for (let i = 0; i < pos.count; i++) {
+                v.fromBufferAttribute(baseGeom, i);
+                const dir = v.clone().normalize(); 
+
+                const u = Math.atan2(dir.z, dir.x) / (Math.PI * 2) + 0.5;
+                const vC = Math.asin(dir.y) / Math.PI + 0.5;
+                
+                const tx = Math.floor(u * 127);
+                const ty = Math.floor(vC * 127);
+                
+                // Read from the unique topology map
+                const rawVal = topo[ty][tx] / 255;
+                const craterMap = Math.pow(rawVal, 2.2); // Exponential depth
+                
+                const finalForce = 1.0 + (craterMap * dScale);
+                
+                v.copy(dir).multiplyScalar(2.0 * finalForce);
+                v.x *= 1.35; // Keep the slab shape
+                v.y *= 0.85;
+                
+                pos.setXYZ(i, v.x, v.y, v.z);
+            }
+            pos.needsUpdate = true;
+            meteor.geometry.computeVertexNormals();
+        }
+
+        URL.revokeObjectURL(textureURL);
+
+    } catch (err) {
+        console.error("Frontend UI Update Error:", err);
+    }
+});
+
+
+document.getElementById('reset-cam').onclick = () => { controls.reset(); };
+init3D();
+</script>
+    </script>
+</body>
+</html>
