@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ASTRA_OS | Mission Control</title>
+    <title>KESSEL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="importmap">
         {
@@ -28,8 +28,8 @@
     <div class="ui-root">
         <header class="flex justify-between items-start">
             <div>
-                <h1 class="text-2xl font-black tracking-tighter text-white">ASTRA_OS <span class="text-blue-500">v4.0</span></h1>
-                <p class="mono text-[10px] text-blue-500/60">PROSPECTING ENGINE // ONLINE</p>
+                <h1 class="text-2xl font-black tracking-tighter text-white">KESSEL <span class="text-blue-500">v1.0</span></h1>
+                <p class="mono text-[10px] text-blue-500/60">METEORITES MINING ANALYZING SOFTWARE</p>
             </div>
             <div class="interactive flex items-center gap-6">
                 <div class="flex flex-col gap-1">
@@ -143,18 +143,19 @@ function animate() {
     renderer.render(scene, camera); 
 }
 
-// --- THE FIXED EVENT LISTENER ---
+document.getElementById('file-input').addEventListener('click', (e) => {
+    e.target.value = ''; 
+});
+
 document.getElementById('file-input').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 1. INITIALIZE FORMDATA IMMEDIATELY (Fixes your error)
     const formData = new FormData();
     formData.append('file', file);
     formData.append('orbit_type', document.getElementById('orbit-type').value);
     formData.append('tool_material', document.getElementById('drill-type').value);
 
-    // 2. TEXTURE PREVIEW
     const textureURL = URL.createObjectURL(file);
     const texture = new THREE.TextureLoader().load(textureURL);
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -170,7 +171,6 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
         
         const data = await res.json();
 
-        // 3. UI UPDATES
         const comp = data.composition;
         const eng = data.engineering;
 
@@ -179,25 +179,30 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
         document.getElementById('ni-bar').style.width = Math.min(100, comp.nickel_pct * 4) + '%';
         document.getElementById('hard-val').innerText = eng.hardness_score;
         document.getElementById('life-val').innerText = eng.tool_life_hrs + 'h';
-        
-        // Fix Risk Percentage display
+        document.getElementById('ir-val').innerText = data.composition.iridium_ppm + ' ppm';
+        document.getElementById('au-val').innerText = data.composition.gold_ppm + ' ppm';
+        document.getElementById('abr-val').innerText = data.engineering.abrasive_index;
+        document.getElementById('alb-val').innerText = data.visual_params.albedo.toFixed(2);
+
+        const riskEl = document.getElementById('risk-text');
+        riskEl.innerText = data.engineering.mission_risk + '%';
+        riskEl.style.color = data.engineering.mission_risk > 50 ? '#ff4444' : '#00ff88';
+
         const riskText = document.getElementById('risk-text');
         if(riskText) {
             riskText.innerText = eng.mission_risk + '%';
             riskText.style.color = eng.mission_risk > 60 ? '#ff4d4d' : '#00ff88';
         }
 
-        // 4. SUPERIOR CARVING ENGINE (No more hedgehogs)
         const pos = meteor.geometry.attributes.position;
         const topo = data.visual_params.topology; 
         const v = new THREE.Vector3();
-        const dScale = 0.85; // Depth control
+        const dScale = 0.85; 
 
         for (let i = 0; i < pos.count; i++) {
             v.fromBufferAttribute(baseGeom, i);
             const dir = v.clone().normalize(); 
 
-            // Prevent polar streaking
             const u = 0.5 + (Math.atan2(dir.z, dir.x) / (2 * Math.PI));
             const vC = 0.5 + (Math.asin(dir.y) / Math.PI);
             
@@ -205,13 +210,11 @@ document.getElementById('file-input').addEventListener('change', async (e) => {
             const ty = Math.floor(vC * 127);
             
             const rawVal = topo[ty][tx] / 255;
-            // Carve INWARD to create regmaglypts
             const craterDepth = Math.pow(rawVal, 2.5) * dScale;
             const finalRadius = 2.0 - craterDepth; 
             
             v.copy(dir).multiplyScalar(finalRadius);
             
-            // Apply Slab proportions
             v.x *= 1.4; 
             v.y *= 0.85;
             
